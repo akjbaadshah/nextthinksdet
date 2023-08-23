@@ -1,1 +1,69 @@
+import psutil
+import csv
+import time
+
+if __name__ == "__main__":
+    main()
+
+def get_process_metrics(process_name, sampling_interval):
+    process = psutil.Process(process_name)
+
+    # Gather the metrics
+    cpu_usage = []
+    private_memory = []
+    open_handles = []
+
+    for _ in range(int(sampling_interval / 5)):
+        cpu_usage.append(process.cpu_percent())
+        private_memory.append(process.memory_info().private)
+        open_handles.append(process.num_handles())
+
+    # Calculate the average for each metric
+    cpu_usage_average = sum(cpu_usage) / len(cpu_usage)
+    private_memory_average = sum(private_memory) / len(private_memory)
+    open_handles_average = sum(open_handles) / len(open_handles)
+
+    return cpu_usage_average, private_memory_average, open_handles_average
+
+
+def detect_memory_leak(cpu_usage_history):
+    #  CPU usage check
+    for i in range(len(cpu_usage_history) - 1):
+        if cpu_usage_history[i] < cpu_usage_history[i + 1]:
+            return True
+
+    return False
+
+
+def main():
+    # user input
+    process_name = input("Enter the process name: ")
+    monitoring_duration = int(input("Enter the monitoring duration in seconds: "))
+    sampling_interval = int(input("Enter the sampling interval in seconds): "))
+    if sampling_interval is None:
+        sampling_interval = 5
+
+    # Gather the process metrics
+    cpu_usage_average, private_memory_average, open_handles_average = get_process_metrics(process_name, sampling_interval)
+
+    # Detect memory leak
+    memory_leak_detected = detect_memory_leak(cpu_usage_average)
+
+    # report process metrics
+    with open("process_metrics.csv", "w") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["CPU usage", "Private memory", "Open handles"])
+        writer.writerow([cpu_usage_average, private_memory_average, open_handles_average])
+
+    # Print the average for each process metric
+    print("CPU usage average:", cpu_usage_average)
+    print("Private memory average:", private_memory_average)
+    print("Open handles average:", open_handles_average)
+
+    # Print a warning if a memory leak is detected
+    if memory_leak_detected:
+        print("Warning: Memory leak detected!")
+
+
+
 
